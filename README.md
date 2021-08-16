@@ -14,4 +14,4 @@ Presentación de los conceptos básicos sobre el propósito del método SVM, as�
 - La carpeta `images` contiene las imágenes presentadas en el artículo.
 - La carpeta `csv` contiene los datasets usados en el tutorial y tomados de [este repositorio](https://vincentarelbundock.github.io/Rdatasets/articles/data.html).
 
-Cualquier duda o sugerencia es bienvenida, no olvides seguirme :happy:
+Cualquier duda o sugerencia es bienvenida, no olvides seguirme :smiley:
