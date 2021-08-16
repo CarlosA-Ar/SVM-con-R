@@ -12,16 +12,6 @@ output:
 runtime: shiny_prerendered
 ---
 
-```{r setup, include=FALSE}
-#Librerías a usar
-library(learnr)
-library(e1071)
-#Modificaciónes para los chunks
-knitr::opts_chunk$set(echo = FALSE)
-#Modificaciones en el tutorial
-```
-
-
 ```{=html}
 <style>
 div {
@@ -177,11 +167,66 @@ code {
 </style>
 ```
 
+```{r setup, include=FALSE}
+#Librerías a usar
+
+  #Hacer el tutorial
+  library(learnr)
+  #Hacer los modelos de SVM
+  library(e1071)
+  #Hacer gráficas bonitas e interactivas
+  library(ggplot2)
+  library(plotly)
+  #Leer los archivos csv
+  library(readxl)
+  #Manejar los archivos
+  library(dplyr)
+
+#Modificaciónes para los chunks
+knitr::opts_chunk$set(echo = FALSE)
+
+```
+
+
+```{r}
+#Pre - exploración
+
+  # Popcorn
+popcorn <- read.csv("https://raw.githubusercontent.com/CarlosA-Ar/SVM-con-R/main/csvs/Popcorn.csv")
+popcorn <- popcorn[, -1]
+popcorn$Brand <- as.factor(popcorn$Brand)
+
+ggplot(popcorn, aes(x = Unpopped , y =  Trial)) + geom_point(color = ifelse(popcorn$Brand == "Orville", 1, 2)) + ggtitle("Popcorn")
+
+
+  # Fishing: filtrando
+fishing <- read.csv("https://raw.githubusercontent.com/CarlosA-Ar/SVM-con-R/main/csvs/Fishing.csv")
+fishing <- fishing[, -1]
+fishing$mode <- as.factor(fishing$mode)
+
+fishing <- fishing %>% select(price, pbeach, mode) %>% filter(fishing$mode == "boat" | fishing$mode == "charter")
+
+ggplot(fishing, aes(x = price, y = pbeach)) + geom_point(color = as.factor(as.integer(fishing$mode))) + ggtitle("Fishing")
+
+
+  # Spruce: filtrado queda muy igua a sitka
+spruce <- read.csv("https://raw.githubusercontent.com/CarlosA-Ar/SVM-con-R/main/csvs/spruce.csv")
+spruce <- spruce[, -1]
+spruce$ozone <- as.factor(spruce$ozone)
+
+spruce <- spruce %>% select(logsize, id, ozone) 
+ggplot(spruce, aes(x = logsize, y = id)) + geom_point(color = ifelse(spruce$ozone == "enriched", 1, 2)) + ggtitle("Spruce")
+```
+
+
+```{r}
+
+```
+
+
 ## Topic 1
 
 ### Exercise
-
-*Here's a simple exercise with an empty code chunk provided for entering the answer.*
 
 Write the R code required to add two plus two:
 
