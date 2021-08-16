@@ -1,0 +1,14 @@
+name: Tutorial_SVM
+title: Tutorial_SVM
+username:
+account: carlos-arguello
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 4496093
+bundleId: 4926687
+url: https://carlos-arguello.shinyapps.io/Tutorial_SVM/
+when: 1629071246.03088
+lastSyncTime: 1629071246.03188
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: README.md|SVM.html|SVM.Rmd|Tutorial_SVM.html|images

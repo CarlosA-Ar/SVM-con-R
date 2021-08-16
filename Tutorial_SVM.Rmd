@@ -1,0 +1,241 @@
+---
+title: "Support Vector Machines in R"
+author: 
+  - name: "Carlos A. Ar."
+  - name: "Ciencia de Datos"
+  - name: "Facultad de Ciencias"
+  - name: "UNAM"
+output:
+  learnr::tutorial:
+    progressive: true
+    allow_skip: false
+runtime: shiny_prerendered
+---
+
+```{r setup, include=FALSE}
+#Librerías a usar
+library(learnr)
+library(e1071)
+#Modificaciónes para los chunks
+knitr::opts_chunk$set(echo = FALSE)
+#Modificaciones en el tutorial
+```
+
+
+```{=html}
+<style>
+div {
+  text-align: justify;
+}
+/***********************/
+/*Títulos ## y autoría F6EACD*/
+/***********************/
+h1, h2 {
+  color: #6D4101;
+  padding: .4em; /*es decir el 60 por ciento del tamaño de la letra*/
+  font-family: "Courier New", monospace;
+  font-size: 35px;
+  font-weight: bold;
+  opacity: 0.95;
+}
+em {
+  color: #8A6C0C;
+  font-family: "Courier New", monospace;
+  font-size: 18px;
+  padding: .2em;
+  opacity: 0.97;
+  font-weight: bold;
+}
+/***********************/
+/* Cuerpo */
+/***********************/
+body {
+  font-family: Verdana, Helvetica, sans-serif;
+  font-size: 16;
+  background-color: #EEF5F9;
+  color: #000000;
+}
+/***********************/
+/* Títulos con ###     */
+/***********************/
+h3, h4, h5{
+  color: #06116C;
+  font-family: Verdana, Helvetica, sans-serif;
+}
+/*******************************************/
+/* Referencias a páginas o a otro documento*/
+/*******************************************/
+a {
+    color: #B8870F;
+    text-decoration: none;
+}
+/**********************/
+/* Chunks de exercises*/
+/**********************/
+.ace-tm {
+    background-color: #FFFEF7;
+    color: #010730;
+}
+/***********************/
+/* tabla de contenidos */
+/***********************/
+.topicsList {
+  padding: .5em;
+}
+.topicsHeader {
+  color: #06116C;
+  padding: .5em;
+}
+.topicsList #doc-metadata {
+  color: #06116C;
+  padding: .5em;
+}
+.topicsList .topic.current {
+  background-color: #8A6C0C;
+  color: #FFFFFF;
+  font-weight: bold;
+}
+.topicsList .topic:hover, .topicsList .topic:active {
+  background-color: #E0CD4E;
+  color: #01053D;
+}
+/***********/
+/* Botones */
+/***********/
+.btn {
+  background-color: #000857;
+  color: #EBEDFF;
+}
+/* cambiar de página */
+.btn-default {
+    color: #EBEDFF;
+    background-color: #000857;
+    border: none;
+}
+/* cambiar de página */
+.btn-light {
+  background-color: #000857;
+  color: #EBEDFF;
+}
+/* run code */
+.btn-primary , .btn-success, .btn-info{
+  background-color: #786300;
+  color: #EBEDFF;
+}
+/* mientras está desabilitados */
+.btn:hover, .btn:active, .btn:disabled {
+  background-color: #786300;
+  color: #EBEDFF;
+}
+/**********/
+/* Código */
+/**********/
+code {
+    color: #6D4101;
+    background-color:  #F7FBF9;
+    font-size: 15px;
+    font-weight: bold;
+}
+/**************************/
+/* Recuadro para ejemplos */
+/**************************/
+.boxed {
+    background: #F7FBF9;
+    color: black;
+    border: 3px solid #C83737;
+    margin: 0px auto;
+    width: 456px;
+    padding: 10px;
+    border-radius: 10px;
+  }
+.note {
+    padding: 1em;
+    margin: 1em 0;
+    padding-left: 100px;
+    background-size: 70px;
+    background-repeat: no-repeat;
+    background-position: 15px 15px;
+    min-height: 120px;
+    color: black;
+    background-color: lightgrey;
+    border: solid 5px #C83737;
+    background-image: url("manzana.png");
+  }
+.note_white {
+    padding: 1em;
+    margin: 1em 0;
+    padding-left: 100px;
+    background-size: 70px;
+    background-repeat: no-repeat;
+    background-position: 15px 15px;
+    min-height: 120px;
+    color: black;
+    background-color: #F7FBF9;
+    border: solid 5px #C83737;
+    background-image: url("manzana.png");
+  }
+</style>
+```
+
+## Topic 1
+
+### Exercise
+
+*Here's a simple exercise with an empty code chunk provided for entering the answer.*
+
+Write the R code required to add two plus two:
+
+```{r two-plus-two, exercise=TRUE}
+
+```
+
+### Exercise with Code
+
+*Here's an exercise with some prepopulated code as well as `exercise.lines = 5` to provide a bit more initial room to work.*
+
+Now write a function that adds any two numbers and then call it:
+
+```{r add-function, exercise=TRUE, exercise.lines = 5}
+add <- function() {
+  
+}
+```
+
+## Topic 2
+
+### Exercise with Hint
+
+*Here's an exercise where the chunk is pre-evaluated via the `exercise.eval` option (so the user can see the default output we'd like them to customize). We also add a "hint" to the correct solution via the chunk immediate below labeled `print-limit-hint`.*
+
+Modify the following code to limit the number of rows printed to 5:
+
+```{r print-limit, exercise=TRUE, exercise.eval=TRUE}
+mtcars
+```
+
+```{r print-limit-hint}
+head(mtcars)
+```
+
+### Quiz
+
+*You can include any number of single or multiple choice questions as a quiz. Use the `question` function to define a question and the `quiz` function for grouping multiple questions together.*
+
+Some questions to verify that you understand the purposes of various base and recommended R packages:
+
+```{r quiz}
+quiz(
+  question("Which package contains functions for installing other R packages?",
+    answer("base"),
+    answer("tools"),
+    answer("utils", correct = TRUE),
+    answer("codetools")
+  ),
+  question("Which of the R packages listed below are used to create plots?",
+    answer("lattice", correct = TRUE),
+    answer("tools"),
+    answer("stats"),
+    answer("grid", correct = TRUE)
+  )
+)
+```
