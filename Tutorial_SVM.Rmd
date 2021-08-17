@@ -8,7 +8,7 @@ author:
 output:
   learnr::tutorial:
     progressive: true
-    allow_skip: false
+    allow_skip: true
 runtime: shiny_prerendered
 ---
 
@@ -183,104 +183,163 @@ code {
   library(dplyr)
 
 #Modificaciónes para los chunks
-knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(echo = FALSE, fig.align ='center')
 
 ```
 
-
-```{r}
-#Pre - exploración
-
+```{r datas}
   # Popcorn
 popcorn <- read.csv("https://raw.githubusercontent.com/CarlosA-Ar/SVM-con-R/main/csvs/Popcorn.csv")
 popcorn <- popcorn[, -1]
 popcorn$Brand <- as.factor(popcorn$Brand)
 
-ggplot(popcorn, aes(x = Unpopped , y =  Trial)) + geom_point(color = ifelse(popcorn$Brand == "Orville", 1, 2)) + ggtitle("Popcorn")
-
-
   # Fishing: filtrando
 fishing <- read.csv("https://raw.githubusercontent.com/CarlosA-Ar/SVM-con-R/main/csvs/Fishing.csv")
 fishing <- fishing[, -1]
 fishing$mode <- as.factor(fishing$mode)
-
 fishing <- fishing %>% select(price, pbeach, mode) %>% filter(fishing$mode == "boat" | fishing$mode == "charter")
 
-ggplot(fishing, aes(x = price, y = pbeach)) + geom_point(color = as.factor(as.integer(fishing$mode))) + ggtitle("Fishing")
+plot_popcorn <- ggplot(popcorn, aes(x = Unpopped , y =  Trial, color = Brand)) + geom_point() + ggtitle("Popcorn") + theme_minimal()
 
-
-  # Spruce: filtrado queda muy igua a sitka
-spruce <- read.csv("https://raw.githubusercontent.com/CarlosA-Ar/SVM-con-R/main/csvs/spruce.csv")
-spruce <- spruce[, -1]
-spruce$ozone <- as.factor(spruce$ozone)
-
-spruce <- spruce %>% select(logsize, id, ozone) 
-ggplot(spruce, aes(x = logsize, y = id)) + geom_point(color = ifelse(spruce$ozone == "enriched", 1, 2)) + ggtitle("Spruce")
+plot_fishing <- ggplot(fishing, aes(x = price, y = pbeach, color = mode)) + geom_point() + ggtitle("Fishing")+ theme_minimal()
 ```
 
+## Introducción
 
-```{r}
+El tutorial usará dos datasets para ejemplificar el uso de los diferentes kernels (famosos) y utilidad de esta función.
 
+Si quieres conocer algunas ideas teóricas de esta técnica _SVM_, constulta este [breve artículo](https://maquinas-de-soporte-vectorial.netlify.app/).
+
+### Objetivo
+
+El tutorial busca que aprendas las bases sobre la función `svm()` de la librería `e1071`. Esta función permite implementar la técnica de clásificación _Support Vector Machines_ en datasets.
+
+### Cargar librería
+
+Para poder hacer uso de la función `svm()`, es primordial cargar la librería `e1071`, puedes hacerlo en el siguiente espacio de código.
+
+```{r ej1, exercise=TRUE}
+#
+library(____)
+#
 ```
 
+### Parámetros de svm()
 
-## Topic 1
+- `formula`: respuesta ~ explicativas
 
-### Exercise
+- `data`: data.frame
 
-Write the R code required to add two plus two:
+- `scale`: ¿Se escalan los datos? Verdadero (T) o Falso (F)
 
-```{r two-plus-two, exercise=TRUE}
+- `type`: "C-classification" por defecto.
 
+- `kernel`: tipo de kernel
+
+    - "linear": $K(x_i, x_j) =\displaystyle \sum_{l = 1}^p x_{il}x_{jl}$
+    
+    - "polynomial": $K(x_i, x_j) = \bigg( 1 + \displaystyle \sum_{l = 1}^p x_{il}x_{jl}\bigg)^d$
+    
+    - "radial": $K(x_i, x_j) = \exp \bigg\{ -\gamma \displaystyle \sum_{l = 1}^p (x_{il} - x_{jl})^2\bigg\}$
+
+- `cost`: 1, por defecto. Es la $C$ del problema de optimización.
+
+Ve más sobre la función en la [documentación de R](https://www.rdocumentation.org/packages/e1071/versions/1.7-8)
+
+## Palomitas de maíz
+
+En esta sección consideremos el dataset siguiente:
+
+### Forma de los datos
+
+- __Popcorn__: éxito en que las palomitas reventaran. 
+
+    Son 12 observaciones, la variable respuesta tiene las etiquetas "Orville" y "Seaway" que significan de mantequilla o de dulce, respectivamente.
+    
+    Las variables explicativas son "Trial" y "Unpopped" lo cual implica que un punto formado por estas variables se referirá a cuándo una palomita que se calentó, explotó.
+    
+<div>
+<p style = 'text-align:center;'>
+![](https://images.squarespace-cdn.com/content/v1/529cfbbce4b05681be287bef/1579061662005-4Q3XJ4BHFEAN3OCE0Z5J/Popcorn.gif){width='350px'}
+</p>
+</div>
+
+En el siguiente código puedes explorar de forma visual la forma en que se acomodan las observaciones en el data set popcorn.
+
+```{r pl1, exercise = TRUE, exercise.setup = "datas"}
+ggplot(popcorn, aes(x = Unpopped , y =  Trial, color = Brand)) +
+  geom_point(size = 4) + 
+  ggtitle("Popcorn") + 
+  theme_minimal()
 ```
 
-### Exercise with Code
+### Crear modelo
 
-*Here's an exercise with some prepopulated code as well as `exercise.lines = 5` to provide a bit more initial room to work.*
+El siguiente ejercicio es para que crees un modelo de SVM en el que uses el dataset `popcorn`.
 
-Now write a function that adds any two numbers and then call it:
-
-```{r add-function, exercise=TRUE, exercise.lines = 5}
-add <- function() {
-  
-}
-```
-
-## Topic 2
-
-### Exercise with Hint
-
-*Here's an exercise where the chunk is pre-evaluated via the `exercise.eval` option (so the user can see the default output we'd like them to customize). We also add a "hint" to the correct solution via the chunk immediate below labeled `print-limit-hint`.*
-
-Modify the following code to limit the number of rows printed to 5:
-
-```{r print-limit, exercise=TRUE, exercise.eval=TRUE}
-mtcars
-```
-
-```{r print-limit-hint}
-head(mtcars)
-```
-
-### Quiz
-
-*You can include any number of single or multiple choice questions as a quiz. Use the `question` function to define a question and the `quiz` function for grouping multiple questions together.*
-
-Some questions to verify that you understand the purposes of various base and recommended R packages:
-
-```{r quiz}
-quiz(
-  question("Which package contains functions for installing other R packages?",
-    answer("base"),
-    answer("tools"),
-    answer("utils", correct = TRUE),
-    answer("codetools")
-  ),
-  question("Which of the R packages listed below are used to create plots?",
-    answer("lattice", correct = TRUE),
-    answer("tools"),
-    answer("stats"),
-    answer("grid", correct = TRUE)
-  )
+```{r ej2, exercise=TRUE, exercise.setup = "datas", exercise.lines = 21}
+popsvm <- svm(
+  formula = Brand ~ .,
+  data = popcorn,
+  scale = FALSE,
+  type = "C-classification",
+  kernel = "linear",
+  cost = 1
 )
+
+#Utiliza una función para saber 
+# el contenido de este modelo
+
+___(popsvm)
+
+# Visualmente
+plot(popsvm, popcorn)
+
+# Exactitud de clasificación
+predpop <- predict(popsvm, popcorn)
+mean(predpop == popcorn$Brand)
+
+```
+
+## Pesca y a comer
+
+En esta sección consideremos el dataset siguiente:
+
+- __Fishing__: elección del modo de pesca.
+
+    1182 observaciones con una variable respuesta con dos etiquetas: "charter" (servicio de excursiones ofrecido por propietarios de botes y pescadores profesionales que lleva a los huéspedes a un cuerpo de agua durante un período determinado con la esperanza de pescar) y "boat" que se refieren a hacer la pesca en bote pero no a la carta.
+    
+    Las variables explicativas son dos: "pbeach" o lejanía de la playa y "price" o costo del viaje.
+    
+<div>
+<p style = 'text-align:center;'>
+![](https://i.gifer.com/UAG7.gif){width='350px'}
+</p>
+</div>
+
+
+```{r pl2, exercise = TRUE, exercise.setup = "datas", exercise.lines = 1}
+plot_fishing
+```
+
+### Crear modelo
+
+Puedes explorar los distintos tipos de kernel existentes.
+
+```{r ej3, exercise=TRUE, exercise.setup = "datas", exercise.timelimit = 159159159159159159159}
+fish_svm <- svm(
+  formula = mode ~ .,
+  data = fishing,
+  scale = FALSE,
+  type = "C-classification",
+  kernel = "polynomial",
+  cost = 1
+)
+
+# Visualmente
+plot(fish_svm, fishing)
+
+# Exactitud de clasificación
+predfish <- predict(fish_svm, fishing)
+mean(predfish == fishing$mode)
 ```
