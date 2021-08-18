@@ -30,3 +30,4 @@ info <- info[, -4]
 write.csv(info, file = "C:/Users/carlo/OneDrive/Documentos/Facultad de Ciencias/Ciencia de Datos/Exposiciones/SVM-con-R/csvs/info.csv", row.names = FALSE)
 write.csv(trainset, file = "C:/Users/carlo/OneDrive/Documentos/Facultad de Ciencias/Ciencia de Datos/Exposiciones/SVM-con-R/csvs/trainset.csv", row.names = FALSE)
 write.csv(testset, file = "C:/Users/carlo/OneDrive/Documentos/Facultad de Ciencias/Ciencia de Datos/Exposiciones/SVM-con-R/csvs/testset.csv", row.names = FALSE)
+
