@@ -188,6 +188,13 @@ knitr::opts_chunk$set(echo = FALSE, fig.align ='center')
 ```
 
 ```{r datas}
+info <- read.csv("https://raw.githubusercontent.com/CarlosA-Ar/SVM-con-R/main/csvs/speed_gender_height.csv")
+info <- info[, -1]
+info$gender <- as.factor(info$gender)
+info <- na.omit(info)
+```
+
+```{r datasL}
 set.seed(1)
 # Este es prácticamente todo lo que desarrollaremos en el tutorial, de aquí 
 # tomaremos los objetos.
@@ -197,9 +204,6 @@ info <- read.csv("https://raw.githubusercontent.com/CarlosA-Ar/SVM-con-R/main/cs
 info <- info[, -1]
 info$gender <- as.factor(info$gender)
 info <- na.omit(info)
-
-# Graficar los datos
-plot_info <- ggplot(info, aes(x = speed, y = height, color = gender)) + geom_point() + ggtitle("Personal Information")+ theme_minimal() + scale_color_manual(values = c("#BD9B17", "#1A1458"))
 
 # Separar datos
 # 80% para construir el modelo, 20% para "probar su capacidad de predecir"
@@ -211,6 +215,7 @@ trainColNum <- grep("train", names(info))
 trainset <- trainset[, -trainColNum]
 testset <- testset[, -trainColNum]
 
+set.seed(1)
 # Construir modelos (ver lo que se obtiene + una gráfica y un accuracy)
 
 ## Lineal
@@ -219,59 +224,77 @@ svm_model_l <- svm(gender ~ .,
                 type = "C-classification", 
                 kernel = "linear", 
                 scale = FALSE)
-names(svm_model_l) # ¿Qué nos devuelve el modelo?
-svm_model_l$index # ¿Cuáles observaciones son vectores soporte?
-svm_model_l$rho # Beta0 (intercepto)
 
-pred_test_1 <- predict(svm_model_l, testset)
-mean(pred_test_1 == testset$gender) #accuracy
+# Graficar los datos
+plot_info <- ggplot(info, aes(x = speed, y = height, color = gender)) + geom_point() + ggtitle("Personal Information")+ theme_minimal() + scale_color_manual(values = c("#BD9B17", "#1A1458"))
 
 w <- t(svm_model_l$coefs) %*% svm_model_l$SV
 slope_l <- -w[1]/w[2]
 intercerpt_l <- svm_model_l$rho / w[2]
-plot_info_svm_l <-  plot_info + 
-  geom_point(data = trainset[svm_model_l$index,],
-             aes(x = speed, y = height),
-             color = "#6EA815", size = 2, alpha = .3) +
-  geom_abline(slope = slope_l,
-              intercept = intercerpt_l,
-              size = 1,
-              color = "#A91323") + 
-  geom_abline(slope = slope_l, 
-              intercept = intercerpt_l - 1/w[2],
-              linetype = "dashed",
-              color = "#A91323") +
-  geom_abline(slope = slope_l, 
-              intercept = intercerpt_l + 1/w[2],
-              linetype = "dashed",
-              color = "#A91323")
-plot(svm_model_l, trainset)
+```
 
+```{r datasP}
+set.seed(1)
+# Este es prácticamente todo lo que desarrollaremos en el tutorial, de aquí 
+# tomaremos los objetos.
+
+# Cargar datos y "limpiarlos"
+info <- read.csv("https://raw.githubusercontent.com/CarlosA-Ar/SVM-con-R/main/csvs/speed_gender_height.csv")
+info <- info[, -1]
+info$gender <- as.factor(info$gender)
+info <- na.omit(info)
+
+# Separar datos
+# 80% para construir el modelo, 20% para "probar su capacidad de predecir"
+info[, "train"] <- ifelse(runif(nrow(info)) < .8, 1, 0)
+trainset <- info[info$train == 1, ]
+testset <- info[info$train == 0, ]
+
+trainColNum <- grep("train", names(info))
+trainset <- trainset[, -trainColNum]
+testset <- testset[, -trainColNum]
+
+set.seed(1)
 ## Polinomial: con la función tune
 tune_out_p <- 
   tune.svm(
     x = trainset[, -2], y = trainset[, 2],
     type = "C-classification",
-    kernel = "polynomial", degree = 2,
+    kernel = "polynomial", degree = c(2,3),
     cost = 10^(-1:1),
     gamma = c(0.1, 1)
     )
-c <- tune_out_p$best.parameters$cost
-gma <- tune_out_p$best.parameters$gamma
 
 svm_model_p <- svm(gender ~ ., 
                 data = trainset, 
                 type = "C-classification", 
                 kernel = "polynomial", degree = 2,
-                cost = c,
-                gamma = gma)
-length(svm_model_p$index) # ¿Cuáles observaciones son vectores soporte?
+                cost = tune_out_p$best.parameters$cost,
+                gamma = tune_out_p$best.parameters$gamma)
+```
 
-pred_test_p <- predict(svm_model_p, testset)
-mean(pred_test_p == testset$gender) #accuracy
+```{r datasR}
+set.seed(1)
+# Este es prácticamente todo lo que desarrollaremos en el tutorial, de aquí 
+# tomaremos los objetos.
 
-plot(svm_model_p, trainset)
+# Cargar datos y "limpiarlos"
+info <- read.csv("https://raw.githubusercontent.com/CarlosA-Ar/SVM-con-R/main/csvs/speed_gender_height.csv")
+info <- info[, -1]
+info$gender <- as.factor(info$gender)
+info <- na.omit(info)
 
+# Separar datos
+# 80% para construir el modelo, 20% para "probar su capacidad de predecir"
+info[, "train"] <- ifelse(runif(nrow(info)) < .8, 1, 0)
+trainset <- info[info$train == 1, ]
+testset <- info[info$train == 0, ]
+
+trainColNum <- grep("train", names(info))
+trainset <- trainset[, -trainColNum]
+testset <- testset[, -trainColNum]
+
+set.seed(1)
 ## Radial: con la función tune.
 tune_out_r <- 
   tune.svm(
@@ -281,54 +304,40 @@ tune_out_r <-
     gamma = 10^(-1:2),
     cost = c(0.01, 0.1, 1, 10)
     )
-svm_model_r <- svm(gender ~ ., 
-                data = trainset, 
-                type = "C-classification", 
-                kernel = "radial",
-                cost = tune_out_r$best.parameters$cost,
-                gamma = tune_out_r$best.parameters$gamma)
-#svm_model_r1 <- svm(gender ~ ., 
-#                data = trainset, 
-#                type = "C-classification", 
-#                kernel = "radial")
-#mean(pred_test_r <- predict(svm_model_r1, testset) == testset$gender)
-
-summary(svm_model_r) 
-
-pred_test_r <- predict(svm_model_r, testset)
-mean(pred_test_r == testset$gender) #accuracy
-
-plot(svm_model_r, trainset)
 ```
 
 ## Introducción
 
-El tutorial usará un dataset para ejemplificar el uso de los diferentes kernels (famosos) y utilidad de esta función. Si quieres conocer algunas ideas teóricas de esta técnica _SVM_, constulta este [breve artículo](https://maquinas-de-soporte-vectorial.netlify.app/).
-
 ### Objetivo
 
-Que aprendas las bases sobre la función `svm()` de la librería `e1071`. Esta función permite implementar la técnica de clásificación _Support Vector Machines_ en datasets.
+Que aprendas las bases sobre la función `svm()` de la librería `e1071`. Esta función permite implementar la técnica de clásificación _Support Vector Machines_ en datasets. Si quieres conocer algunas ideas teóricas de esta técnica _SVM_, constulta este [breve artículo](https://maquinas-de-soporte-vectorial.netlify.app/).
+
+El tutorial usará un dataset como medio de aplicación de esta técnica reciente (inicios en 1990). Veremos algunas formas de graficar los resultados con `ggplot2` y podrás cambiar los parámetros de `svm()` para explorar resultados. 
 
 ### Cargar librería
 
 Para poder hacer uso de la función `svm()`, es primordial cargar la librería `e1071`, puedes hacerlo en el siguiente espacio de código.
 
 ```{r ej1, exercise=TRUE}
-#
+# Cargar la librería
 library(____)
 ```
 
 ### Parámetros de svm()
 
-- `formula`: respuesta ~ explicativas
+Como se ve en la teoría, debemos considerar una variable respuesta que sea categórica y tenga dos etiquetas (al menos).
+
+En un objeto de tipo `data.frame` guardamos los datos: renglones/observaciones, columnas/variables(v).
+
+- `formula`: v.respuesta ~ v.explicativas
 
 - `data`: data.frame
 
 - `scale`: ¿Se escalan los datos? Verdadero (T) o Falso (F)
 
-- `type`: "C-classification" por defecto.
+- `type`: "C-classification" por defecto. Permite hacer que la SVM clasifique las observaciones, según v.respuesta.
 
-- `kernel`: tipo de kernel
+- `kernel`: tipo de kernel. Puede tomar los siguientes valores:
 
     - "linear": $K(x_i, x_j) =\displaystyle \sum_{l = 1}^p x_{il}x_{jl}$
     
@@ -336,9 +345,9 @@ library(____)
     
     - "radial": $K(x_i, x_j) = \exp \bigg\{ -\gamma \displaystyle \sum_{l = 1}^p (x_{il} - x_{jl})^2\bigg\}$
 
-- `cost`: 1, por defecto. Es la $C$ del problema de optimización.
+- `cost`: 1, por defecto. Es la $C$ del [problema de optimización](https://maquinas-de-soporte-vectorial.netlify.app/#problema%20de%20optimizaci%C3%B3n).
 
-Ve más sobre la función en la [documentación de R](https://www.rdocumentation.org/packages/e1071/versions/1.7-8)
+Ve más parámetros de la función en la [documentación de R](https://www.rdocumentation.org/packages/e1071/versions/1.7-8).
 
 ## ¿Confirmando estereotipos?
 
@@ -346,7 +355,7 @@ En esta sección consideremos el dataset siguiente:
 
 ### Forma de los datos
 
-- __speed_gender_height__: Velocidad, género y altura de 1325 estudiantes.
+- __speed_gender_height__: Velocidad, género y altura de 1302 estudiantes.
 
     Son 1302 observaciones, la variable respuesta tiene las etiquetas "female" y "male" de la variable categórica $y =$ gender.
     
@@ -358,7 +367,9 @@ En esta sección consideremos el dataset siguiente:
 </p>
 </div>
 
-En el siguiente código puedes explorar de forma visual la forma en que se acomodan las observaciones en el data set popcorn.
+En el siguiente código puedes explorar de visualmente la forma en que se acomodan las observaciones en el data set popcorn.
+
+__Nota:__ el parámetro `alpha` (que puede tomar cualquier valor 0 y 1) en la una función de `ggplot2` nos dice qué tan "transparentes" se colorearán los puntos. Si `alpha = 1` entonces no es transparente.
 
 ```{r pl1, exercise = TRUE, exercise.setup = "datas"}
 plot_info <- ggplot(info, aes(x = speed, y = height, color = gender)) + 
@@ -369,6 +380,8 @@ plot_info <- ggplot(info, aes(x = speed, y = height, color = gender)) +
 
 plot_info
 ```
+
+Notemos que hay traslape pero parece ser una separación "lineal".
 
 ## Separar datos
 
@@ -389,18 +402,20 @@ testset <- info[info$train == 0, ]
 trainColNum <- grep("train", names(info))
 trainset <- trainset[, -trainColNum]
 testset <- testset[, -trainColNum]
+
+length(testset$gender)
 ```
 
 ## Crear modelo
 
-Para implementar la técnica SVM con los diferentes kernels, presentamos los siguientes ejercicios:
+En este capítulo construiremos el modelo con los datos que ya exploramos. Los ejercicios se dividen según se desea cambiar el kernel.
 
 ### Lineal
 
 $$K(x_i, x_j) =\displaystyle \sum_{l = 1}^p x_{il}x_{jl}$$
-Ajusta un SVM con un kernel lineal a los datos `info`
+Ajusta un SVM con un kernel lineal a los datos `info`.
 
-```{r ej3, exercise = TRUE, exercise.setup = "datas"}
+```{r ej3, exercise = TRUE, exercise.setup = "datasL"}
 svm_model_l <- svm(gender ~ ., 
                 data = trainset, 
                 type = "C-classification", 
@@ -410,15 +425,19 @@ svm_model_l <- svm(gender ~ .,
 
 Revisemos algunos elementos que nos devuelve el modelo
 
-```{r ej4, exercise = TRUE, exercise.setup = "datas"}
+```{r ej4, exercise = TRUE, exercise.setup = "datasL"}
 names(svm_model_l) # ¿Qué nos devuelve el modelo?
 svm_model_l$index # ¿Cuáles observaciones son vectores soporte?
 svm_model_l$rho # Beta0 (intercepto)
 ```
 
-Obtengamos la pendiente y ordenada al origen del hiperplano (recta, para las amistades :satisfied:)
+Obtengamos la pendiente y ordenada al origen del hiperplano (recta, para las amistades). Recordemos que si 
 
-```{r ej5, exercise = TRUE, exercise.setup = "datas"}
+$$
+\beta_0 + \beta_1 x_1 + \beta_2 x_2 = 0 \rightarrow x_2 = \frac{-\beta_1}{\beta_2} x_1 + \frac{-\beta_0}{\beta_2}
+$$
+
+```{r ej5, exercise = TRUE, exercise.setup = "datasL"}
 # Vector de pesos
 w <- t(svm_model_l$coefs) %*% svm_model_l$SV
 #Pendiente
@@ -429,7 +448,7 @@ intercerpt_l <- svm_model_l$rho / w[2]
 
 Hagamos un gráfico de los datos con el hiperplano y los márgenes
 
-```{r ej6, exercise = TRUE, exercise.setup = "datas"}
+```{r ej6, exercise = TRUE, exercise.setup = "datasL", exercise.lines = 21}
 plot_info_svm_l <-  plot_info + 
   # resaltamos los vectores soporte
   geom_point(data = trainset[svm_model_l$____,],
@@ -449,13 +468,16 @@ plot_info_svm_l <-  plot_info +
               intercept = intercerpt_l + 1/w[2],
               linetype = "dashed",
               color = "#A91323")
+
+plot_info_svm_l
 ```
 
 ¿Qué tan bien hizo la clasificación?
 
-```{r ejextr, exercise = TRUE, exercise.setup = "datas"}
+```{r ejextr, exercise = TRUE, exercise.setup = "datasL"}
 pred_test_1 <- predict(svm_model_l, testset)
 mean(pred_test_1 == testset$gender) #accuracy
+plot(svm_model_l, trainset)
 ```
 
 
@@ -466,7 +488,7 @@ Recordemos que existen diversos hiperparámetros, parámetros que nosotros decid
 
 Esto lo hace buscando el modelo que mejores aciertos tenga de predicción, o menor error, de entre todas las combinaciones posibles.
 
-```{r ej7, exercise = TRUE, exercise.setup = "datas"}
+```{r ej7, exercise = TRUE, exercise.setup = "datasP"}
 tune_out_p <- 
   tune.svm(
     #en vez del data set, y la fórmula, se escriben la respuesta y
@@ -478,19 +500,22 @@ tune_out_p <-
     cost = 10^(-1:1),
     gamma = c(0.1, 1)
     )
-
-#Obtenemos los "mejores" valores de hiperaprámetros
-c <- tune_out_p$best.parameters$cost
-gma <- tune_out_p$best.parameters$gamma
+tune_out_p
 ```
 
 Una vez hecho lo anterior, podemos construir nuestro modelo
 
-```{r ej8, exercise = TRUE, exercise.setup = "datas"}
+```{r ej8, exercise = TRUE, exercise.setup = "datasP"}
+
+#Obtenemos los "mejores" valores de hiperaprámetros
+c <- tune_out_p$best.parameters$cost
+gma <- tune_out_p$best.parameters$gamma
+d <- tune_out_p$best.parameters$degree
+
 svm_model_p <- svm(gender ~ ., 
                 data = ____, 
                 type = "C-classification", 
-                kernel = "polynomial", degree = ___,
+                kernel = "polynomial", degree = d,
                 cost = c,
                 gamma = gma)
 
@@ -500,11 +525,11 @@ length(svm_model_p$index)
 
 Por último veamos la exactitud de predicción del modelo (accuracy) así como el plot que nos brinda `e1071` por defecto.
 
-```{r ej9, exercise = TRUE, exercise.setup = "datas"}
+```{r ej9, exercise = TRUE, exercise.setup = "datasP"}
 pred_test_p <- predict(svm_model_p, testset)
 mean(pred_test_p == testset$gender) #accuracy
 
-svm_p_plot <- plot(svm_model_p, trainset)
+plot(svm_model_p, trainset)
 ```
 
 ### Radial
@@ -514,7 +539,7 @@ Como en el ejerciicio anterior, he buscado los "mejores" hiperparámetros. Ahora
 
 Considera que en este ejercicio el objetivo es que uses un kernel radial.
 
-```{r ej10, exercise = TRUE, exercise.setup = "datas"}
+```{r ej10, exercise = TRUE, exercise.setup = "datasR"}
 svm_model_r <- svm(____ ~ ., 
                 data = trainset, 
                 type = "C-classification", 
