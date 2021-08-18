@@ -5,10 +5,10 @@ account: carlos-arguello
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 4496093
-bundleId: 4931034
+bundleId: 4935253
 url: https://carlos-arguello.shinyapps.io/Tutorial_SVM/
-when: 1629170738.12801
-lastSyncTime: 1629170738.12801
+when: 1629264183.96165
+lastSyncTime: 1629264183.96165
 asMultiple: FALSE
 asStatic: FALSE
-ignoredFiles: csvs/Fishing.csv|csvs/Popcorn.csv|csvs/spruce.csv|index/index.html|README.md|SVM.html|SVM.Rmd|Tutorial_SVM.html|Tutorial_SVM_files/figure-html/pl1-1.png|images
+ignoredFiles: csvs/Fishing.csv|csvs/Popcorn.csv|csvs/speed_gender_height.csv|csvs/spruce.csv|index/index.html|README.md|SVM.html|SVM.Rmd|Tutorial_SVM.html|Tutorial_SVM_files/figure-html/pl1-1.png

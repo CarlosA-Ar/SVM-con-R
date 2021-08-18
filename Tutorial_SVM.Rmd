@@ -174,9 +174,9 @@ code {
   library(learnr)
   #Hacer los modelos de SVM
   library(e1071)
-  #Hacer gráficas bonitas e interactivas
+  #Hacer gráficas bonitas y acomodadas
   library(ggplot2)
-  library(plotly)
+  library(gridExtra)
   #Leer los archivos csv
   library(readxl)
   #Manejar los archivos
@@ -188,31 +188,126 @@ knitr::opts_chunk$set(echo = FALSE, fig.align ='center')
 ```
 
 ```{r datas}
-  # Popcorn
-popcorn <- read.csv("https://raw.githubusercontent.com/CarlosA-Ar/SVM-con-R/main/csvs/Popcorn.csv")
-popcorn <- popcorn[, -1]
-popcorn$Brand <- as.factor(popcorn$Brand)
+set.seed(1)
+# Este es prácticamente todo lo que desarrollaremos en el tutorial, de aquí 
+# tomaremos los objetos.
 
-  # Fishing: filtrando
-fishing <- read.csv("https://raw.githubusercontent.com/CarlosA-Ar/SVM-con-R/main/csvs/Fishing.csv")
-fishing <- fishing[, -1]
-fishing$mode <- as.factor(fishing$mode)
-fishing <- fishing %>% select(price, pbeach, mode) %>% filter(fishing$mode == "boat" | fishing$mode == "charter")
+# Cargar datos y "limpiarlos"
+info <- read.csv("https://raw.githubusercontent.com/CarlosA-Ar/SVM-con-R/main/csvs/speed_gender_height.csv")
+info <- info[, -1]
+info$gender <- as.factor(info$gender)
+info <- na.omit(info)
 
-plot_popcorn <- ggplot(popcorn, aes(x = Unpopped , y =  Trial, color = Brand)) + geom_point() + ggtitle("Popcorn") + theme_minimal()
+# Graficar los datos
+plot_info <- ggplot(info, aes(x = speed, y = height, color = gender)) + geom_point() + ggtitle("Personal Information")+ theme_minimal() + scale_color_manual(values = c("#BD9B17", "#1A1458"))
 
-plot_fishing <- ggplot(fishing, aes(x = price, y = pbeach, color = mode)) + geom_point() + ggtitle("Fishing")+ theme_minimal()
+# Separar datos
+# 80% para construir el modelo, 20% para "probar su capacidad de predecir"
+info[, "train"] <- ifelse(runif(nrow(info)) < .8, 1, 0)
+trainset <- info[info$train == 1, ]
+testset <- info[info$train == 0, ]
+
+trainColNum <- grep("train", names(info))
+trainset <- trainset[, -trainColNum]
+testset <- testset[, -trainColNum]
+
+# Construir modelos (ver lo que se obtiene + una gráfica y un accuracy)
+
+## Lineal
+svm_model_l <- svm(gender ~ ., 
+                data = trainset, 
+                type = "C-classification", 
+                kernel = "linear", 
+                scale = FALSE)
+names(svm_model_l) # ¿Qué nos devuelve el modelo?
+svm_model_l$index # ¿Cuáles observaciones son vectores soporte?
+svm_model_l$rho # Beta0 (intercepto)
+
+pred_test_1 <- predict(svm_model_l, testset)
+mean(pred_test_1 == testset$gender) #accuracy
+
+w <- t(svm_model_l$coefs) %*% svm_model_l$SV
+slope_l <- -w[1]/w[2]
+intercerpt_l <- svm_model_l$rho / w[2]
+plot_info_svm_l <-  plot_info + 
+  geom_point(data = trainset[svm_model_l$index,],
+             aes(x = speed, y = height),
+             color = "#6EA815", size = 2, alpha = .3) +
+  geom_abline(slope = slope_l,
+              intercept = intercerpt_l,
+              size = 1,
+              color = "#A91323") + 
+  geom_abline(slope = slope_l, 
+              intercept = intercerpt_l - 1/w[2],
+              linetype = "dashed",
+              color = "#A91323") +
+  geom_abline(slope = slope_l, 
+              intercept = intercerpt_l + 1/w[2],
+              linetype = "dashed",
+              color = "#A91323")
+plot(svm_model_l, trainset)
+
+## Polinomial: con la función tune
+tune_out_p <- 
+  tune.svm(
+    x = trainset[, -2], y = trainset[, 2],
+    type = "C-classification",
+    kernel = "polynomial", degree = 2,
+    cost = 10^(-1:1),
+    gamma = c(0.1, 1)
+    )
+c <- tune_out_p$best.parameters$cost
+gma <- tune_out_p$best.parameters$gamma
+
+svm_model_p <- svm(gender ~ ., 
+                data = trainset, 
+                type = "C-classification", 
+                kernel = "polynomial", degree = 2,
+                cost = c,
+                gamma = gma)
+length(svm_model_p$index) # ¿Cuáles observaciones son vectores soporte?
+
+pred_test_p <- predict(svm_model_p, testset)
+mean(pred_test_p == testset$gender) #accuracy
+
+plot(svm_model_p, trainset)
+
+## Radial: con la función tune.
+tune_out_r <- 
+  tune.svm(
+    x = trainset[, -2], y = trainset[, 2],
+    type = "C-classification",
+    kernel = "radial",
+    gamma = 10^(-1:2),
+    cost = c(0.01, 0.1, 1, 10)
+    )
+svm_model_r <- svm(gender ~ ., 
+                data = trainset, 
+                type = "C-classification", 
+                kernel = "radial",
+                cost = tune_out_r$best.parameters$cost,
+                gamma = tune_out_r$best.parameters$gamma)
+#svm_model_r1 <- svm(gender ~ ., 
+#                data = trainset, 
+#                type = "C-classification", 
+#                kernel = "radial")
+#mean(pred_test_r <- predict(svm_model_r1, testset) == testset$gender)
+
+summary(svm_model_r) 
+
+pred_test_r <- predict(svm_model_r, testset)
+mean(pred_test_r == testset$gender) #accuracy
+
+plot(svm_model_r, trainset)
 ```
 
 ## Introducción
 
-El tutorial usará dos datasets para ejemplificar el uso de los diferentes kernels (famosos) y utilidad de esta función.
-
-Si quieres conocer algunas ideas teóricas de esta técnica _SVM_, constulta este [breve artículo](https://maquinas-de-soporte-vectorial.netlify.app/).
+El tutorial usará un dataset para ejemplificar el uso de los diferentes kernels (famosos) y utilidad de esta función. Si quieres conocer algunas ideas teóricas de esta técnica _SVM_, constulta este [breve artículo](https://maquinas-de-soporte-vectorial.netlify.app/).
 
 ### Objetivo
 
-El tutorial busca que aprendas las bases sobre la función `svm()` de la librería `e1071`. Esta función permite implementar la técnica de clásificación _Support Vector Machines_ en datasets.
+Que aprendas las bases sobre la función `svm()` de la librería `e1071`. Esta función permite implementar la técnica de clásificación _Support Vector Machines_ en datasets.
 
 ### Cargar librería
 
@@ -221,7 +316,6 @@ Para poder hacer uso de la función `svm()`, es primordial cargar la librería `
 ```{r ej1, exercise=TRUE}
 #
 library(____)
-#
 ```
 
 ### Parámetros de svm()
@@ -246,100 +340,247 @@ library(____)
 
 Ve más sobre la función en la [documentación de R](https://www.rdocumentation.org/packages/e1071/versions/1.7-8)
 
-## Palomitas de maíz
+## ¿Confirmando estereotipos?
 
 En esta sección consideremos el dataset siguiente:
 
 ### Forma de los datos
 
-- __Popcorn__: éxito en que las palomitas reventaran. 
+- __speed_gender_height__: Velocidad, género y altura de 1325 estudiantes.
 
-    Son 12 observaciones, la variable respuesta tiene las etiquetas "Orville" y "Seaway" que significan de mantequilla o de dulce, respectivamente.
+    Son 1302 observaciones, la variable respuesta tiene las etiquetas "female" y "male" de la variable categórica $y =$ gender.
     
-    Las variables explicativas son "Trial" y "Unpopped" lo cual implica que un punto formado por estas variables se referirá a cuándo una palomita que se calentó, explotó.
+    Las variables explicativas son "height" y "speed" de las personas participantes en el estudio.
     
 <div>
 <p style = 'text-align:center;'>
-![](https://images.squarespace-cdn.com/content/v1/529cfbbce4b05681be287bef/1579061662005-4Q3XJ4BHFEAN3OCE0Z5J/Popcorn.gif){width='350px'}
+![](https://okdiario.com/img/2018/01/19/-por-que-los-hombres-pueden-correr-mas-rapido-que-las-mujeres-2.jpg){width='350px'}
 </p>
 </div>
 
 En el siguiente código puedes explorar de forma visual la forma en que se acomodan las observaciones en el data set popcorn.
 
 ```{r pl1, exercise = TRUE, exercise.setup = "datas"}
-ggplot(popcorn, aes(x = Unpopped , y =  Trial, color = Brand)) +
-  geom_point(size = 4) + 
-  ggtitle("Popcorn") + 
-  theme_minimal()
+plot_info <- ggplot(info, aes(x = speed, y = height, color = gender)) + 
+  geom_point(alpha = ___) + 
+  ggtitle("Personal Information") + 
+  theme_minimal() + 
+  scale_color_manual(values = c("#BD9B17", "#1A1458"))
+
+plot_info
 ```
 
-### Crear modelo
+## Separar datos
 
-El siguiente ejercicio es para que crees un modelo de SVM en el que uses el dataset `popcorn`.
+Para poder comprobar la utilidad de nuestro modelo, es común hacer que el conjuntos de datos se parta en dos (inicialmente...): 
 
-```{r ej2, exercise=TRUE, exercise.setup = "datas", exercise.lines = 21}
-popsvm <- svm(
-  formula = Brand ~ .,
-  data = popcorn,
-  scale = FALSE,
-  type = "C-classification",
-  kernel = "linear",
-  cost = 1
-)
+- __trainingset__ para construir el modelo) y 
 
-#Utiliza una función para saber 
-# el contenido de este modelo
+- __testset__ para hacer las predicciones y poner a prueba el poder de predicción del modelo.
 
-___(popsvm)
+En este ejercicio usaremos el dataset info para partir los datos en dos conjuntos.
 
-# Visualmente
-plot(popsvm, popcorn)
+```{r ej2, exercise = TRUE, exercise.setup = "datas"}
+# 80% para construir el modelo, 20% para "probar su capacidad de predecir"
+info[, "train"] <- ifelse(runif(nrow(info)) < .8, 1, 0)
+trainset <- info[info$train == 1, ]
+testset <- info[info$train == 0, ]
 
-# Exactitud de clasificación
-predpop <- predict(popsvm, popcorn)
-mean(predpop == popcorn$Brand)
-
+trainColNum <- grep("train", names(info))
+trainset <- trainset[, -trainColNum]
+testset <- testset[, -trainColNum]
 ```
 
-## Pesca y a comer
+## Crear modelo
 
-En esta sección consideremos el dataset siguiente:
+Para implementar la técnica SVM con los diferentes kernels, presentamos los siguientes ejercicios:
 
-- __Fishing__: elección del modo de pesca.
+### Lineal
 
-    1182 observaciones con una variable respuesta con dos etiquetas: "charter" (servicio de excursiones ofrecido por propietarios de botes y pescadores profesionales que lleva a los huéspedes a un cuerpo de agua durante un período determinado con la esperanza de pescar) y "boat" que se refieren a hacer la pesca en bote pero no a la carta.
-    
-    Las variables explicativas son dos: "pbeach" o lejanía de la playa y "price" o costo del viaje.
-    
+$$K(x_i, x_j) =\displaystyle \sum_{l = 1}^p x_{il}x_{jl}$$
+Ajusta un SVM con un kernel lineal a los datos `info`
+
+```{r ej3, exercise = TRUE, exercise.setup = "datas"}
+svm_model_l <- svm(gender ~ ., 
+                data = trainset, 
+                type = "C-classification", 
+                kernel = "____", 
+                scale = FALSE)
+```
+
+Revisemos algunos elementos que nos devuelve el modelo
+
+```{r ej4, exercise = TRUE, exercise.setup = "datas"}
+names(svm_model_l) # ¿Qué nos devuelve el modelo?
+svm_model_l$index # ¿Cuáles observaciones son vectores soporte?
+svm_model_l$rho # Beta0 (intercepto)
+```
+
+Obtengamos la pendiente y ordenada al origen del hiperplano (recta, para las amistades :satisfied:)
+
+```{r ej5, exercise = TRUE, exercise.setup = "datas"}
+# Vector de pesos
+w <- t(svm_model_l$coefs) %*% svm_model_l$SV
+#Pendiente
+slope_l <- -w[1]/w[2]
+#Ordenada al origen
+intercerpt_l <- svm_model_l$rho / w[2]
+```
+
+Hagamos un gráfico de los datos con el hiperplano y los márgenes
+
+```{r ej6, exercise = TRUE, exercise.setup = "datas"}
+plot_info_svm_l <-  plot_info + 
+  # resaltamos los vectores soporte
+  geom_point(data = trainset[svm_model_l$____,],
+             aes(x = speed, y = height),
+             color = "#6EA815", size = 2, alpha = .3) +
+  # añadimos el hiperplano
+  geom_abline(slope = slope_l,
+              intercept = ______,
+              size = 1,
+              color = "#A91323") + 
+  # con sus lineas paralelas con el margen correspondiente
+  geom_abline(slope = slope_l, 
+              intercept = intercerpt_l - 1/w[2],
+              linetype = "dashed",
+              color = "#A91323") +
+  geom_abline(slope = slope_l, 
+              intercept = intercerpt_l + 1/w[2],
+              linetype = "dashed",
+              color = "#A91323")
+```
+
+¿Qué tan bien hizo la clasificación?
+
+```{r ejextr, exercise = TRUE, exercise.setup = "datas"}
+pred_test_1 <- predict(svm_model_l, testset)
+mean(pred_test_1 == testset$gender) #accuracy
+```
+
+
+### Polinomial
+
+$$K(x_i, x_j) = \bigg( 1 + \displaystyle \sum_{l = 1}^p x_{il}x_{jl}\bigg)^d$$
+Recordemos que existen diversos hiperparámetros, parámetros que nosotros decidimos. Para no hacer una elección al azar, la función `tune.svm()` nos permite elegir "los mejores" de entre la lista que demos.
+
+Esto lo hace buscando el modelo que mejores aciertos tenga de predicción, o menor error, de entre todas las combinaciones posibles.
+
+```{r ej7, exercise = TRUE, exercise.setup = "datas"}
+tune_out_p <- 
+  tune.svm(
+    #en vez del data set, y la fórmula, se escriben la respuesta y
+    #las variables explicativas
+    x = trainset[, -2], y = trainset[, 2],
+    type = "C-classification",
+    kernel = "_____", degree = 2,
+    #Damos diferentes valores para los parámetros
+    cost = 10^(-1:1),
+    gamma = c(0.1, 1)
+    )
+
+#Obtenemos los "mejores" valores de hiperaprámetros
+c <- tune_out_p$best.parameters$cost
+gma <- tune_out_p$best.parameters$gamma
+```
+
+Una vez hecho lo anterior, podemos construir nuestro modelo
+
+```{r ej8, exercise = TRUE, exercise.setup = "datas"}
+svm_model_p <- svm(gender ~ ., 
+                data = ____, 
+                type = "C-classification", 
+                kernel = "polynomial", degree = ___,
+                cost = c,
+                gamma = gma)
+
+# ¿Cuántas de las observaciones son vectores soporte?
+length(svm_model_p$index) 
+```
+
+Por último veamos la exactitud de predicción del modelo (accuracy) así como el plot que nos brinda `e1071` por defecto.
+
+```{r ej9, exercise = TRUE, exercise.setup = "datas"}
+pred_test_p <- predict(svm_model_p, testset)
+mean(pred_test_p == testset$gender) #accuracy
+
+svm_p_plot <- plot(svm_model_p, trainset)
+```
+
+### Radial
+
+$$K(x_i, x_j) = \exp \bigg\{ -\gamma \displaystyle \sum_{l = 1}^p (x_{il} - x_{jl})^2\bigg\}$$
+Como en el ejerciicio anterior, he buscado los "mejores" hiperparámetros. Ahora solo te toca obtener el modelo, ver su exactitud de predicción y graficar.
+
+Considera que en este ejercicio el objetivo es que uses un kernel radial.
+
+```{r ej10, exercise = TRUE, exercise.setup = "datas"}
+svm_model_r <- svm(____ ~ ., 
+                data = trainset, 
+                type = "C-classification", 
+                kernel = "____",
+                cost = tune_out_r$best.parameters$___,
+                gamma = tune_out_r$____$gamma)
+
+summary(____) 
+
+pred_test_r <- predict(svm_model_r, ____)
+mean(_____ == testset$gender) #accuracy
+
+plot(svm_model_r, _____)
+```
+
+```{r ej10-solution}
+svm_model_r <- svm(gender ~ ., 
+                data = trainset, 
+                type = "C-classification", 
+                kernel = "radial",
+                cost = tune_out_r$best.parameters$cost,
+                gamma = tune_out_r$best.parameters$gamma)
+
+summary(svm_model_r) 
+
+pred_test_r <- predict(svm_model_r, testset)
+mean(pred_test_r == testset$gender) #accuracy
+
+plot(svm_model_r, trainset)
+```
+
+## ¿Qué modelo es mejor?
+
+Como sabemos, la respuesta no existe a una pregunta que carece de sentido. El problema es que bajo diferentes datasets, los modelos pueden variar en la exactitud de su clasificación. 
+
+Lo que es cierto es que para este dataset en particular obtuvimos:
+
+### Lineal 82.29% accuracy
+
 <div>
 <p style = 'text-align:center;'>
-![](https://i.gifer.com/UAG7.gif){width='350px'}
+![](images/svm_tut1.png){width='650px'}
 </p>
 </div>
 
+### Polinomial 66.66% accuracy
 
-```{r pl2, exercise = TRUE, exercise.setup = "datas", exercise.lines = 1}
-plot_fishing
-```
+<div>
+<p style = 'text-align:center;'>
+![](images/svm_tut2.png){width='650px'}
+</p>
+</div>
 
-### Crear modelo
+### Radial 81.94% accuracy
 
-Puedes explorar los distintos tipos de kernel existentes.
+<div>
+<p style = 'text-align:center;'>
+![](images/svm_tut3.png){width='650px'}
+</p>
+</div>
 
-```{r ej3, exercise=TRUE, exercise.setup = "datas", exercise.timelimit = 159159159159159159159}
-fish_svm <- svm(
-  formula = mode ~ .,
-  data = fishing,
-  scale = FALSE,
-  type = "C-classification",
-  kernel = "polynomial",
-  cost = 1
-)
+Debemos considerar que los modelos estuvieron sujetos tanto a la partición que se hizo para crear el modelo (trainset/testset), como a los hiperparámetros que __nosotros__ enlistados.
 
-# Visualmente
-plot(fish_svm, fishing)
 
-# Exactitud de clasificación
-predfish <- predict(fish_svm, fishing)
-mean(predfish == fishing$mode)
-```
+<div>
+<p style = 'text-align:center;'>
+![](https://thumbs.gfycat.com/SevereAlertBunting-size_restricted.gif){width='750px'}
+</p>
+</div>
