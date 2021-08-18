@@ -188,32 +188,14 @@ knitr::opts_chunk$set(echo = FALSE, fig.align ='center')
 ```
 
 ```{r datas}
-info <- read.csv("https://raw.githubusercontent.com/CarlosA-Ar/SVM-con-R/main/csvs/speed_gender_height.csv")
-info <- info[, -1]
-info$gender <- as.factor(info$gender)
-info <- na.omit(info)
+info <- read.csv("https://raw.githubusercontent.com/CarlosA-Ar/SVM-con-R/main/csvs/info.csv")
 ```
 
 ```{r datasL}
-set.seed(1)
-# Este es prácticamente todo lo que desarrollaremos en el tutorial, de aquí 
-# tomaremos los objetos.
-
 # Cargar datos y "limpiarlos"
-info <- read.csv("https://raw.githubusercontent.com/CarlosA-Ar/SVM-con-R/main/csvs/speed_gender_height.csv")
-info <- info[, -1]
-info$gender <- as.factor(info$gender)
-info <- na.omit(info)
-
-# Separar datos
-# 80% para construir el modelo, 20% para "probar su capacidad de predecir"
-info[, "train"] <- ifelse(runif(nrow(info)) < .8, 1, 0)
-trainset <- info[info$train == 1, ]
-testset <- info[info$train == 0, ]
-
-trainColNum <- grep("train", names(info))
-trainset <- trainset[, -trainColNum]
-testset <- testset[, -trainColNum]
+info <- read.csv("https://raw.githubusercontent.com/CarlosA-Ar/SVM-con-R/main/csvs/info.csv")
+trainset <- read.csv("https://raw.githubusercontent.com/CarlosA-Ar/SVM-con-R/main/csvs/trainset.csv")
+testset <- read.csv("https://raw.githubusercontent.com/CarlosA-Ar/SVM-con-R/main/csvs/testset.csv")
 
 set.seed(1)
 # Construir modelos (ver lo que se obtiene + una gráfica y un accuracy)

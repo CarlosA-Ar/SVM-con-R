@@ -23,6 +23,8 @@ trainColNum <- grep("train", names(info))
 trainset <- trainset[,-trainColNum]
 testset <- testset[,-trainColNum]
 
+info <- info[, -4]
+
 # Creamos las tres tablas
 
 write.csv(info, file = "C:/Users/carlo/OneDrive/Documentos/Facultad de Ciencias/Ciencia de Datos/Exposiciones/SVM-con-R/csvs/info.csv", row.names = FALSE)
